@@ -95,7 +95,7 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
 
   protected abstract void onOutgoingCallEnded(Context ctx, String number, Date start, Date end);
 
-  protected abstract void onMissedCall(Context ctx, String number, Date start);
+  protected abstract void onMissedCall(Context ctx, String number, Date start, Date end);
 
   protected abstract void onCustomReceive(Context ctx, Intent intent);
 
@@ -131,7 +131,7 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
         //Went to idle-  this is the end of a call.  What type depends on previous state(s)
         if (lastState == TelephonyManager.CALL_STATE_RINGING) {
           //Ring but no pickup-  a miss
-          onMissedCall(context, number, callStartTime);
+          onMissedCall(context, number, callStartTime, new Date());
         } else if (isIncoming) {
           onIncomingCallEnded(context, number, callStartTime, new Date());
         } else {
