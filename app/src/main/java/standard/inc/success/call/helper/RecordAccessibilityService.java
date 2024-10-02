@@ -7,7 +7,6 @@ import android.content.IntentFilter;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
-import android.telephony.TelephonyManager;
 
 import androidx.annotation.NonNull;
 
