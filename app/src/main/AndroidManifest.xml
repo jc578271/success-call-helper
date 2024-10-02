@@ -3,6 +3,9 @@
   xmlns:tools="http://schemas.android.com/tools">
 
   <uses-permission android:name="android.permission.RECORD_AUDIO" />
+  <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+  <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
+  <uses-permission android:name="android.permission.READ_CALL_LOG" />
 
   <application
     android:allowBackup="true"
@@ -38,16 +41,14 @@
     </service>
 
     <provider
-      android:name="androidx.core.content.FileProvider"
-      android:authorities="standard.inc.success.call.helper.fileprovider"
-      android:exported="false"
-      android:grantUriPermissions="true">
-
-      <meta-data
-        android:name="android.support.FILE_PROVIDER_PATHS"
-        android:resource="@xml/file_paths" /> <!-- Points to the file_paths.xml file -->
-    </provider>
+      android:name=".FileContentProvider"
+      android:authorities="standard.inc.success.call.helper.FileContentProvider"
+      android:exported="true"
+      android:grantUriPermissions="true"
+      tools:ignore="ExportedContentProvider" />
 
   </application>
-
+  <queries>
+    <package android:name="standard.inc.success.call"/>
+  </queries>
 </manifest>

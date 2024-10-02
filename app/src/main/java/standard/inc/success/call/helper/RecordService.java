@@ -1,5 +1,6 @@
 package standard.inc.success.call.helper;
 
+import android.content.Context;
 import android.media.MediaRecorder;
 import android.util.Log;
 
@@ -9,21 +10,13 @@ public class RecordService {
 
   private MediaRecorder mediaRecorder;
   private String fileName;
-  private String path;
+  private final String path;
+
+  RecordService(Context context) {
+    path = context.getFilesDir().getPath();
+  }
 
   public static final String TAG = "RecordService";
-
-  public String getPath() {
-    return path;
-  }
-
-  public void setPath(String path) {
-    this.path = path;
-  }
-
-  public String getFileName() {
-    return fileName;
-  }
 
   public void setFileName(String fileName) {
     this.fileName = fileName;
@@ -66,6 +59,7 @@ public class RecordService {
 
     mediaRecorder.reset();
     mediaRecorder.release();
-    return path + "/" + fileName;
+
+    return FileContentProvider.getUriForFile(fileName);
   }
 }

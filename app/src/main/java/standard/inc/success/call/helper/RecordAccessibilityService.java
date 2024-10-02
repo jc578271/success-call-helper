@@ -1,15 +1,20 @@
 package standard.inc.success.call.helper;
 
 import android.accessibilityservice.AccessibilityService;
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.telephony.TelephonyManager;
 
 import androidx.annotation.NonNull;
+
+import java.util.Date;
+import java.util.Objects;
+
+import standard.inc.success.call.helper.services.PhoneCallReceiver;
 
 public class RecordAccessibilityService extends AccessibilityService {
   private static final String MAIN_APP_PACKAGE_NAME = "standard.inc.success.call";
@@ -28,9 +33,8 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     Log.d(TAG, getPackageName());
 
+    /* registerReceiver */
     IntentFilter filter = getIntentFilter();
-
-    // Register using the correct context
     try {
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
         registerReceiver(recordingReceiver, filter, Context.RECEIVER_EXPORTED);
@@ -38,6 +42,11 @@ public class RecordAccessibilityService extends AccessibilityService {
         registerReceiver(recordingReceiver, filter);
       }
       Log.d(TAG, "Receiver registered");
+
+      Intent params = new Intent();
+      params.putExtra("recordEnabled", false);
+      sendFromHelperBroadcast(BroadcastAction.onRecordEnabled, params);
+      Log.d(TAG, "RecordEnabled");
     } catch (Exception e) {
       Log.e(TAG, "Error registering receiver: " + e.getMessage());
     }
@@ -47,12 +56,9 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     // Register the system-wide broadcast receiver to listen for the custom intents
     IntentFilter filter = new IntentFilter();
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.IncomingCallReceived);
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.IncomingCallAnswered);
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.IncomingCallEnded);
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.OutgoingCallStarted);
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.OutgoingCallEnded);
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.MissedCall);
+    filter.addAction("android.intent.action.PHONE_STATE");
+    filter.addAction("android.intent.action.NEW_OUTGOING_CALL");
+    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled);
 
     return filter;
   }
@@ -60,6 +66,7 @@ public class RecordAccessibilityService extends AccessibilityService {
   @Override
   public void onDestroy() {
     super.onDestroy();
+    sendRecordEnabled(false);
     unregisterReceiver(recordingReceiver);
   }
 
@@ -73,125 +80,129 @@ public class RecordAccessibilityService extends AccessibilityService {
   }
 
   private void startRecord(String name, String start) {
-    recordService = new RecordService();
+    recordService = new RecordService(this);
     recordService.setFileName(name + start.replaceAll("[^a-zA-Z0-9-_.]", "_") + ".wav");
-    recordService.setPath(getFilesDir().getPath());
     recordService.startRecord();
   }
 
-  // Define the BroadcastReceiver
-  private final BroadcastReceiver recordingReceiver = new BroadcastReceiver() {
+  private final PhoneCallReceiver recordingReceiver = new PhoneCallReceiver() {
+//    private static final String TAG = "PhoneCallReceiver";
+    public boolean recordEnabled = false;
+
     @Override
-    public void onReceive(Context context, Intent intent) {
+    protected void onCustomReceive(Context ctx, Intent intent) {
       String action = intent.getAction();
-      Log.i(TAG, "BroadcastReceiver, action: " + action);
+//      Log.d(TAG, "onCustomReceive, action: " + action);
+      if (Objects.requireNonNull(action).equals((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled))) {
+        recordEnabled = intent.getBooleanExtra("recordEnabled", false);
+        Log.d(TAG, "onCustomReceive, recordEnabled: " + recordEnabled);
+        sendRecordEnabled(recordEnabled);
+      }
+    }
 
-      String number = intent.getStringExtra("number");
-      String start = intent.getStringExtra("start");
-      String end = intent.getStringExtra("end");
-      boolean recordEnable = intent.getBooleanExtra("recordEnable", false);
+    @Override
+    protected void onIncomingCallReceived(Context ctx, String number, Date start) {
+      Log.i(TAG, "CALL_RECORDER INCOMING_RECEIVED, callState: " + callState);
+      if (callState > 0) return;
+      callState = 1;
 
-      /* --------- INCOMING ------------- */
-      /* IncomingCallReceived */
-      if ((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.IncomingCallReceived).equals(action)) {
-        Log.i(TAG, "CALL_RECORDER INCOMING_RECEIVED, callState: " + callState);
-        if (callState > 0) return;
-        callState++;
+      Intent params = new Intent();
+      params.putExtra("number", number);
+      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("type", "INCOMING_RECEIVED");
+      sendFromHelperBroadcast(BroadcastAction.onIncomingCallReceived, params);
+    }
 
+    @Override
+    protected void onIncomingCallAnswered(Context ctx, String number, Date start) {
+      Log.i(TAG, "CALL_RECORDER INCOMING_ANSWERED, callState: " + callState);
+      if (callState > 1) return;
+      callState = 2;
+      if (!recordEnabled) {
         Intent params = new Intent();
         params.putExtra("number", number);
-        params.putExtra("type", "INCOMING_RECEIVED");
-        sendFromHelperBroadcast(BroadcastAction.onIncomingCallReceived, params);
+        params.putExtra("start", String.valueOf(start.getTime()));
+        params.putExtra("type", "INCOMING_ANSWERED");
+        params.putExtra("reason", "Record is disabled");
+        sendFromHelperBroadcast(BroadcastAction.onBlockRecordPhoneCall, params);
         return;
       }
+      startRecord("record-incoming-", String.valueOf(start.getTime()));
+    }
 
-      /* IncomingCallAnswered */
-      if ((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.IncomingCallAnswered).equals(action)) {
-        Log.i(TAG, "CALL_RECORDER INCOMING_ANSWERED, callState: " + callState);
-        if (callState > 1) return;
-        callState++;
-        if (!recordEnable) {
-          Intent params = new Intent();
-          params.putExtra("number", number);
-          params.putExtra("type", "INCOMING_ANSWERED");
-          params.putExtra("reason", "Record is disabled");
-          sendFromHelperBroadcast(BroadcastAction.onBlockRecordPhoneCall, params);
-          return;
-        }
-        assert start != null;
-        startRecord("record-incoming-", start);
-        return;
-      }
+    @Override
+    protected void onIncomingCallEnded(Context ctx, String number, Date start, Date end) {
+      Log.i(TAG, "CALL_RECORDER INCOMING_ENDED, callState: " + callState);
+      if (recordService == null) return;
+      if (callState > 2) return;
+      callState = 0;
+      String path = stopRecord();
+      Intent params = new Intent();
+      params.putExtra("filePath", path);
+      params.putExtra("number", number);
+      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("end", String.valueOf(end.getTime()));
+      sendFromHelperBroadcast(BroadcastAction.onIncomingCallRecorded, params);
+    }
 
-      /* IncomingCallEnded */
-      if ((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.IncomingCallEnded).equals(action)) {
-        Log.i(TAG, "CALL_RECORDER INCOMING_ENDED, callState: " + callState);
-        if (recordService == null) return;
-        if (callState > 2) return;
-        callState = 0;
-        String path = stopRecord();
-        Intent params = new Intent();
-        params.putExtra("filePath", path);
-        params.putExtra("number", number);
-        params.putExtra("start", start);
-        params.putExtra("end", end);
-        sendFromHelperBroadcast(BroadcastAction.onIncomingCallRecorded, params);
-        return;
-      }
-
-      /* --------- OUTGOING ------------- */
-      /* OutgoingCallStarted */
-      if ((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.OutgoingCallStarted).equals(action)) {
-        Log.i(TAG, "CALL_RECORDER OUTGOING_STARTED, callState: " + callState);
-        if (callState > 0) return;
-        callState++;
-        if (!recordEnable) {
-          Intent params = new Intent();
-          params.putExtra("number", number);
-          params.putExtra("type", "OUTGOING_STARTED");
-          params.putExtra("reason", "Record is disabled");
-          sendFromHelperBroadcast(BroadcastAction.onBlockRecordPhoneCall, params);
-          return;
-        }
-        assert start != null;
-        startRecord("record-outgoing-", start);
-        return;
-      }
-
-      /* OutgoingCallEnded */
-      if ((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.OutgoingCallEnded).equals(action)) {
-        Log.i(TAG, "CALL_RECORDER OUTGOING_ENDED, callState: " + callState);
-        if (recordService == null) return;
-        if (callState > 1) return;
-        callState = 0;
-        String path = stopRecord();
-        Intent params = new Intent();
-        params.putExtra("filePath", path);
-        params.putExtra("number", number);
-        params.putExtra("start", start);
-        params.putExtra("end", end);
-        sendFromHelperBroadcast(BroadcastAction.onOutgoingCallRecorded, params);
-        return;
-      }
-
-      /* MissedCall */
-      if ((MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.MissedCall).equals(action)) {
-        Log.i(TAG, "CALL_RECORDER MISSED, callState: " + callState);
-        if (callState > 1) return;
-        callState = 0;
+    @Override
+    protected void onOutgoingCallStarted(Context ctx, String number, Date start) {
+      Log.i(TAG, "CALL_RECORDER OUTGOING_STARTED, callState: " + callState);
+      if (callState > 0) return;
+      callState = 1;
+      if (!recordEnabled) {
         Intent params = new Intent();
         params.putExtra("number", number);
-        params.putExtra("start", start);
-        sendFromHelperBroadcast(BroadcastAction.onMissedCall, params);
+        params.putExtra("type", "OUTGOING_STARTED");
+        params.putExtra("reason", "Record is disabled");
+        sendFromHelperBroadcast(BroadcastAction.onBlockRecordPhoneCall, params);
+        return;
       }
+      startRecord("record-outgoing-", String.valueOf(start.getTime()));
+    }
+
+    @Override
+    protected void onOutgoingCallEnded(Context ctx, String number, Date start, Date end) {
+      Log.i(TAG, "CALL_RECORDER OUTGOING_ENDED, callState: " + callState);
+      if (recordService == null) return;
+      if (callState > 1) return;
+      callState = 0;
+      String path = stopRecord();
+      Intent params = new Intent();
+      params.putExtra("filePath", path);
+      params.putExtra("number", number);
+      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("end", String.valueOf(end.getTime()));
+      sendFromHelperBroadcast(BroadcastAction.onOutgoingCallRecorded, params);
+    }
+
+    @Override
+    protected void onMissedCall(Context ctx, String number, Date start) {
+      Log.i(TAG, "CALL_RECORDER MISSED, callState: " + callState);
+      if (callState > 1) return;
+      callState = 0;
+      Intent params = new Intent();
+      params.putExtra("number", number);
+      params.putExtra("start", String.valueOf(start.getTime()));
+      sendFromHelperBroadcast(BroadcastAction.onMissedCall, params);
     }
   };
 
   private void sendFromHelperBroadcast(String eventName, Intent eventData) {
-    String packageName = getPackageName();
-    Log.i(TAG, "sendBroadcast: " + packageName + " : " + eventName);
-    eventData.setAction(packageName + "." + eventName);
-    sendBroadcast(eventData);
+    try {
+      String packageName = getPackageName();
+      Log.i(TAG, "sendBroadcast: " + packageName + " : " + eventName);
+      eventData.setAction(packageName + "." + eventName);
+      sendBroadcast(eventData);
+    } catch (Exception e) {
+      Log.e(TAG, Objects.requireNonNull(e.getMessage()));
+    }
+  }
+
+  private void sendRecordEnabled(boolean recordEnabled) {
+    Intent params = new Intent();
+    params.putExtra("recordEnabled", recordEnabled);
+    sendFromHelperBroadcast(BroadcastAction.onRecordEnabled, params);
   }
 }
 

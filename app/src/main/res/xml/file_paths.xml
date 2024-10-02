@@ -1,22 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <paths>
-  <!-- Share files from the app's internal storage -->
-  <files-path
-    name="shared_files"
-    path="." />  <!-- All files in the internal files directory -->
-
-  <!-- Share a specific directory in external storage -->
-  <external-files-path
-    name="external_files"
-    path="shared/" />  <!-- A specific directory in external files storage -->
-
-  <!-- Share cache files -->
-  <cache-path
-    name="cache_files"
-    path="." />  <!-- All files in the cache directory -->
-
-  <!-- Share files from the external storage root directory -->
-  <external-path
-    name="external_root"
-    path="Download/" />  <!-- Files in the "Download" directory on external storage -->
+  <!-- This exposes files in the app's internal storage -->
+  <files-path name="files" path="." />
 </paths>
