@@ -1,9 +1,13 @@
 package standard.inc.success.call.helper;
 
 import android.accessibilityservice.AccessibilityService;
+import android.annotation.SuppressLint;
+import android.app.Notification;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -21,6 +25,7 @@ public class RecordAccessibilityService extends AccessibilityService {
 
   private RecordService recordService;
   private int callState = 0;
+  private boolean recordEnabled = false;
 
   @Override
   public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
@@ -42,9 +47,7 @@ public class RecordAccessibilityService extends AccessibilityService {
       }
       Log.d(TAG, "Receiver registered");
 
-      Intent params = new Intent();
-      params.putExtra("recordEnabled", false);
-      sendFromHelperBroadcast(BroadcastAction.onRecordEnabled, params);
+      sendRecordEnabled(false);
       Log.d(TAG, "RecordEnabled");
     } catch (Exception e) {
       Log.e(TAG, "Error registering receiver: " + e.getMessage());
@@ -58,6 +61,7 @@ public class RecordAccessibilityService extends AccessibilityService {
     filter.addAction("android.intent.action.PHONE_STATE");
     filter.addAction("android.intent.action.NEW_OUTGOING_CALL");
     filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled);
+    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.getRecordStatus);
 
     return filter;
   }
@@ -85,23 +89,32 @@ public class RecordAccessibilityService extends AccessibilityService {
   }
 
   private final PhoneCallReceiver recordingReceiver = new PhoneCallReceiver() {
-    public boolean recordEnabled = false;
-
     @Override
     protected void onCustomReceive(Context ctx, Intent intent) {
       String action = intent.getAction();
-      if (Objects.requireNonNull(action).equals(
-        MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled
-      )) {
-        recordEnabled = intent.getBooleanExtra("recordEnabled", false);
-        Log.d(TAG, "onCustomReceive, recordEnabled: " + recordEnabled);
-        sendRecordEnabled(recordEnabled);
+      if (action == null) return;
+
+      switch (action) {
+        case MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled: {
+          recordEnabled = intent.getBooleanExtra("recordEnabled", false);
+          Log.d(TAG, "onRecordEnabled, recordEnabled: " + recordEnabled);
+          sendRecordEnabled(recordEnabled);
+          break;
+        }
+
+        case MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.getRecordStatus: {
+          Log.d(TAG, "getRecordStatus, recordEnabled: " + recordEnabled);
+          sendRecordEnabled(recordEnabled);
+          break;
+        }
+
+        default: break;
       }
     }
 
     @Override
     protected void onIncomingCallReceived(Context ctx, String number, Date start) {
-      Log.i(TAG, "CALL_RECORDER INCOMING_RECEIVED, callState: " + callState);
+      Log.d(TAG, "CALL_RECORDER INCOMING_RECEIVED, callState: " + callState);
       if (callState != 0) return;
       callState = 1;
       Intent params = new Intent();
@@ -111,12 +124,12 @@ public class RecordAccessibilityService extends AccessibilityService {
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
-      sendFromHelperBroadcast(BroadcastAction.onCallStateChange, params);
+      startMainAppService(BroadcastAction.onCallStateChange, params);
     }
 
     @Override
     protected void onIncomingCallAnswered(Context ctx, String number, Date start) {
-      Log.i(TAG, "CALL_RECORDER INCOMING_ANSWERED, callState: " + callState);
+      Log.d(TAG, "CALL_RECORDER INCOMING_ANSWERED, callState: " + callState);
       if (callState != 1) return;
       callState = 2;
       Intent params = new Intent();
@@ -126,7 +139,7 @@ public class RecordAccessibilityService extends AccessibilityService {
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
-      sendFromHelperBroadcast(BroadcastAction.onCallStateChange, params);
+      startMainAppService(BroadcastAction.onCallStateChange, params);
 
       if (recordEnabled) {
         startRecord("record-incoming-", String.valueOf(start.getTime()));
@@ -135,7 +148,7 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onIncomingCallEnded(Context ctx, String number, Date start, Date end) {
-      Log.i(TAG, "CALL_RECORDER INCOMING_ENDED, callState: " + callState);
+      Log.d(TAG, "CALL_RECORDER INCOMING_ENDED, callState: " + callState);
       if (callState != 2) return;
       callState = 0;
       Intent params = new Intent();
@@ -151,12 +164,12 @@ public class RecordAccessibilityService extends AccessibilityService {
         params.putExtra("filePath", path);
       }
 
-      sendFromHelperBroadcast(BroadcastAction.onCallStateChange, params);
+      startMainAppService(BroadcastAction.onCallStateChange, params);
     }
 
     @Override
     protected void onOutgoingCallStarted(Context ctx, String number, Date start) {
-      Log.i(TAG, "CALL_RECORDER OUTGOING_STARTED, callState: " + callState);
+      Log.d(TAG, "CALL_RECORDER OUTGOING_STARTED, callState: " + callState);
       if (callState != 0) return;
       callState = 1;
       Intent params = new Intent();
@@ -166,7 +179,7 @@ public class RecordAccessibilityService extends AccessibilityService {
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
-      sendFromHelperBroadcast(BroadcastAction.onCallStateChange, params);
+      startMainAppService(BroadcastAction.onCallStateChange, params);
 
       if (recordEnabled) {
         startRecord("record-outgoing-", String.valueOf(start.getTime()));
@@ -176,7 +189,7 @@ public class RecordAccessibilityService extends AccessibilityService {
     @Override
     protected void onOutgoingCallEnded(Context ctx, String number, Date start, Date end) {
       try {
-        Log.i(TAG, "CALL_RECORDER OUTGOING_ENDED, callState: " + callState);
+        Log.d(TAG, "CALL_RECORDER OUTGOING_ENDED, callState: " + callState);
 
         if (callState != 1) return;
         callState = 0;
@@ -195,7 +208,7 @@ public class RecordAccessibilityService extends AccessibilityService {
           params.putExtra("filePath", path);
         }
 
-        sendFromHelperBroadcast(BroadcastAction.onCallStateChange, params);
+        startMainAppService(BroadcastAction.onCallStateChange, params);
       } catch (Exception e) {
         Log.e(TAG, "onOutgoingCallEnded, error: " + e.getMessage());
       }
@@ -204,7 +217,7 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onMissedCall(Context ctx, String number, Date start, Date end) {
-      Log.i(TAG, "CALL_RECORDER MISSED, callState: " + callState);
+      Log.d(TAG, "CALL_RECORDER MISSED, callState: " + callState);
       if (callState != 1) return;
       callState = 0;
 
@@ -216,25 +229,38 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       params.putExtra("end", String.valueOf(end.getTime()));
 
-      sendFromHelperBroadcast(BroadcastAction.onCallStateChange, params);
+      startMainAppService(BroadcastAction.onCallStateChange, params);
     }
   };
 
-  private void sendFromHelperBroadcast(String eventName, Intent eventData) {
+  private void startMainAppService(String eventName, Intent eventData) {
     try {
-      String packageName = getPackageName();
-      Log.i(TAG, "sendBroadcast: " + packageName + " : " + eventName);
-      eventData.setAction(packageName + "." + eventName);
-      sendBroadcast(eventData);
+
+      Log.d(TAG, "startMainAppService: " + MAIN_APP_PACKAGE_NAME + " : " + eventName);
+//      eventData.setAction(packageName + "." + eventName);
+//      sendBroadcast(eventData);
+
+      eventData.setAction(eventName);
+      eventData.setComponent(new ComponentName(MAIN_APP_PACKAGE_NAME, MAIN_APP_PACKAGE_NAME + ".telephony.HelperService"));
+      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+        startForegroundService(eventData);
+      } else {
+        startService(eventData);
+      }
+
     } catch (Exception e) {
       Log.e(TAG, Objects.requireNonNull(e.getMessage()));
     }
   }
 
   private void sendRecordEnabled(boolean recordEnabled) {
+    String packageName = getPackageName();
+    Log.d(TAG, "sendRecordEnabled: " + packageName + " : " + BroadcastAction.onRecordEnabled);
+
     Intent params = new Intent();
     params.putExtra("recordEnabled", recordEnabled);
-    sendFromHelperBroadcast(BroadcastAction.onRecordEnabled, params);
+    params.setAction(packageName + "." + BroadcastAction.onRecordEnabled);
+    sendBroadcast(params);
   }
 }
 

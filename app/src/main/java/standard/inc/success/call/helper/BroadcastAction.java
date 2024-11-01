@@ -2,6 +2,7 @@ package standard.inc.success.call.helper;
 
 public abstract class BroadcastAction {
   public static final String onRecordEnabled = "onRecordEnabled";
+  public static final String getRecordStatus = "getRecordStatus";
   public static final String onCallStateChange = "onCallStateChange";
 
   public static final String INCOMING_CALL_RECEIVED = "INCOMING_CALL_RECEIVED";
