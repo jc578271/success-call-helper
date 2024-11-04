@@ -60,6 +60,7 @@ public class MainActivity extends AppCompatActivity {
       add(Manifest.permission.RECORD_AUDIO);
       add(Manifest.permission.READ_PHONE_STATE);
       add(Manifest.permission.READ_CALL_LOG);
+//      add(Manifest.permission.READ_SMS);
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
         add(Manifest.permission.READ_PHONE_NUMBERS);

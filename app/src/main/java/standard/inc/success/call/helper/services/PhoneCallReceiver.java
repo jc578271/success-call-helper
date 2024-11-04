@@ -1,11 +1,19 @@
 package standard.inc.success.call.helper.services;
 
+import android.Manifest;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.os.Build;
 import android.telephony.PhoneStateListener;
+import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
 import android.util.Log;
+
+import androidx.annotation.RequiresApi;
+import androidx.core.app.ActivityCompat;
 
 import java.util.Date;
 
@@ -48,6 +56,7 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
 //      telephony = (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
 //
 //      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+//        Log.d(TAG, "telephonyCallback");
 //        MyTelephonyCallback telephonyCallback = new MyTelephonyCallback(context);
 //        if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_CALL_LOG)
 //          == PackageManager.PERMISSION_GRANTED) {
@@ -74,7 +83,8 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
 //
 //    @Override
 //    public void onCallStateChanged(int state) {
-//      if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED &&
+//      if (ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED &&
+//        ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_NUMBERS) != PackageManager.PERMISSION_GRANTED &&
 //        ActivityCompat.checkSelfPermission(context, Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
 //        return;
 //      }
@@ -108,6 +118,9 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
       //No change, debounce extras
       return;
     }
+
+//    Log.d(TAG, "onCustomCallStateChanged, state: " + state);
+
     switch (state) {
       case TelephonyManager.CALL_STATE_RINGING:
         isIncoming = true;

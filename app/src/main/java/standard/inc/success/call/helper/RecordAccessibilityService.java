@@ -1,13 +1,10 @@
 package standard.inc.success.call.helper;
 
 import android.accessibilityservice.AccessibilityService;
-import android.annotation.SuppressLint;
-import android.app.Notification;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.ServiceInfo;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
@@ -60,8 +57,8 @@ public class RecordAccessibilityService extends AccessibilityService {
     IntentFilter filter = new IntentFilter();
     filter.addAction("android.intent.action.PHONE_STATE");
     filter.addAction("android.intent.action.NEW_OUTGOING_CALL");
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled);
-    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.getRecordStatus);
+    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + Constants.onRecordEnabled);
+    filter.addAction(MAIN_APP_PACKAGE_NAME + "." + Constants.getRecordStatus);
 
     return filter;
   }
@@ -95,20 +92,21 @@ public class RecordAccessibilityService extends AccessibilityService {
       if (action == null) return;
 
       switch (action) {
-        case MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.onRecordEnabled: {
+        case MAIN_APP_PACKAGE_NAME + "." + Constants.onRecordEnabled: {
           recordEnabled = intent.getBooleanExtra("recordEnabled", false);
           Log.d(TAG, "onRecordEnabled, recordEnabled: " + recordEnabled);
           sendRecordEnabled(recordEnabled);
           break;
         }
 
-        case MAIN_APP_PACKAGE_NAME + "." + BroadcastAction.getRecordStatus: {
+        case MAIN_APP_PACKAGE_NAME + "." + Constants.getRecordStatus: {
           Log.d(TAG, "getRecordStatus, recordEnabled: " + recordEnabled);
           sendRecordEnabled(recordEnabled);
           break;
         }
 
-        default: break;
+        default:
+          break;
       }
     }
 
@@ -119,12 +117,12 @@ public class RecordAccessibilityService extends AccessibilityService {
       callState = 1;
       Intent params = new Intent();
 
-      params.putExtra("type", BroadcastAction.INCOMING_CALL_RECEIVED);
+      params.putExtra("status", Constants.INCOMING_CALL_RECEIVED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
-      startMainAppService(BroadcastAction.onCallStateChange, params);
+      startMainAppService(Constants.onCallStateChange, params);
     }
 
     @Override
@@ -134,12 +132,12 @@ public class RecordAccessibilityService extends AccessibilityService {
       callState = 2;
       Intent params = new Intent();
 
-      params.putExtra("type", BroadcastAction.INCOMING_CALL_ANSWERED);
+      params.putExtra("status", Constants.INCOMING_CALL_ANSWERED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
-      startMainAppService(BroadcastAction.onCallStateChange, params);
+      startMainAppService(Constants.onCallStateChange, params);
 
       if (recordEnabled) {
         startRecord("record-incoming-", String.valueOf(start.getTime()));
@@ -153,7 +151,7 @@ public class RecordAccessibilityService extends AccessibilityService {
       callState = 0;
       Intent params = new Intent();
 
-      params.putExtra("type", BroadcastAction.INCOMING_CALL_ENDED);
+      params.putExtra("status", Constants.INCOMING_CALL_ENDED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
@@ -164,7 +162,7 @@ public class RecordAccessibilityService extends AccessibilityService {
         params.putExtra("filePath", path);
       }
 
-      startMainAppService(BroadcastAction.onCallStateChange, params);
+      startMainAppService(Constants.onCallStateChange, params);
     }
 
     @Override
@@ -174,12 +172,12 @@ public class RecordAccessibilityService extends AccessibilityService {
       callState = 1;
       Intent params = new Intent();
 
-      params.putExtra("type", BroadcastAction.OUTGOING_CALL_STARTED);
+      params.putExtra("status", Constants.OUTGOING_CALL_STARTED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
-      startMainAppService(BroadcastAction.onCallStateChange, params);
+      startMainAppService(Constants.onCallStateChange, params);
 
       if (recordEnabled) {
         startRecord("record-outgoing-", String.valueOf(start.getTime()));
@@ -196,7 +194,7 @@ public class RecordAccessibilityService extends AccessibilityService {
 
         Intent params = new Intent();
 
-        params.putExtra("type", BroadcastAction.OUTGOING_CALL_ENDED);
+        params.putExtra("status", Constants.OUTGOING_CALL_ENDED);
         params.putExtra("recordEnabled", recordEnabled);
         params.putExtra("number", number);
         params.putExtra("start", String.valueOf(start.getTime()));
@@ -208,7 +206,7 @@ public class RecordAccessibilityService extends AccessibilityService {
           params.putExtra("filePath", path);
         }
 
-        startMainAppService(BroadcastAction.onCallStateChange, params);
+        startMainAppService(Constants.onCallStateChange, params);
       } catch (Exception e) {
         Log.e(TAG, "onOutgoingCallEnded, error: " + e.getMessage());
       }
@@ -222,23 +220,20 @@ public class RecordAccessibilityService extends AccessibilityService {
       callState = 0;
 
       Intent params = new Intent();
-      params.putExtra("type", BroadcastAction.OUTGOING_CALL_MISSED);
+      params.putExtra("status", Constants.CALL_MISSED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", number);
       params.putExtra("start", String.valueOf(start.getTime()));
 
       params.putExtra("end", String.valueOf(end.getTime()));
 
-      startMainAppService(BroadcastAction.onCallStateChange, params);
+      startMainAppService(Constants.onCallStateChange, params);
     }
   };
 
   private void startMainAppService(String eventName, Intent eventData) {
     try {
-
       Log.d(TAG, "startMainAppService: " + MAIN_APP_PACKAGE_NAME + " : " + eventName);
-//      eventData.setAction(packageName + "." + eventName);
-//      sendBroadcast(eventData);
 
       eventData.setAction(eventName);
       eventData.setComponent(new ComponentName(MAIN_APP_PACKAGE_NAME, MAIN_APP_PACKAGE_NAME + ".telephony.HelperService"));
@@ -255,11 +250,11 @@ public class RecordAccessibilityService extends AccessibilityService {
 
   private void sendRecordEnabled(boolean recordEnabled) {
     String packageName = getPackageName();
-    Log.d(TAG, "sendRecordEnabled: " + packageName + " : " + BroadcastAction.onRecordEnabled);
+    Log.d(TAG, "sendRecordEnabled: " + packageName + " : " + Constants.onRecordEnabled);
 
     Intent params = new Intent();
     params.putExtra("recordEnabled", recordEnabled);
-    params.setAction(packageName + "." + BroadcastAction.onRecordEnabled);
+    params.setAction(packageName + "." + Constants.onRecordEnabled);
     sendBroadcast(params);
   }
 }
