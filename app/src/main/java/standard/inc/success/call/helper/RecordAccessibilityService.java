@@ -1,6 +1,7 @@
 package standard.inc.success.call.helper;
 
 import android.accessibilityservice.AccessibilityService;
+import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -8,6 +9,7 @@ import android.content.IntentFilter;
 import android.os.Build;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 import androidx.annotation.NonNull;
 
@@ -22,17 +24,35 @@ public class RecordAccessibilityService extends AccessibilityService {
 
   private RecordService recordService;
   private int callState = 0;
+  private int callType = 0; // 0: null, 1: outgoing, 2: incoming
+  private String callNumber = null;
+  private Long callStart = null;
   private boolean recordEnabled = false;
 
   @Override
   public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
+//    AccessibilityNodeInfo info = accessibilityEvent.getSource();
+//    if (info != null && info.getText() != null) {
+//      Log.d(TAG, "info.getText(): "+ info.getText());
+//      if (info.getText().equals("Call add"))
+//      onOutgoingCallAnswered();
+//    }
+  }
+
+  @Override
+  protected void onServiceConnected() {
+    super.onServiceConnected();
+    AccessibilityServiceInfo info = new AccessibilityServiceInfo();
+    info.eventTypes = AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED;
+    info.feedbackType = AccessibilityServiceInfo.FEEDBACK_GENERIC;
+    info.notificationTimeout = 0;
+    info.packageNames = null;
+    setServiceInfo(info);
   }
 
   @Override
   public void onCreate() {
     super.onCreate();
-
-    Log.d(TAG, getPackageName());
 
     /* registerReceiver */
     IntentFilter filter = getIntentFilter();
@@ -42,10 +62,8 @@ public class RecordAccessibilityService extends AccessibilityService {
       } else {
         registerReceiver(recordingReceiver, filter);
       }
-      Log.d(TAG, "Receiver registered");
 
       sendRecordEnabled(false);
-      Log.d(TAG, "RecordEnabled");
     } catch (Exception e) {
       Log.e(TAG, "Error registering receiver: " + e.getMessage());
     }
@@ -94,13 +112,11 @@ public class RecordAccessibilityService extends AccessibilityService {
       switch (action) {
         case MAIN_APP_PACKAGE_NAME + "." + Constants.onRecordEnabled: {
           recordEnabled = intent.getBooleanExtra("recordEnabled", false);
-          Log.d(TAG, "onRecordEnabled, recordEnabled: " + recordEnabled);
           sendRecordEnabled(recordEnabled);
           break;
         }
 
         case MAIN_APP_PACKAGE_NAME + "." + Constants.getRecordStatus: {
-          Log.d(TAG, "getRecordStatus, recordEnabled: " + recordEnabled);
           sendRecordEnabled(recordEnabled);
           break;
         }
@@ -112,30 +128,34 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onIncomingCallReceived(Context ctx, String number, Date start) {
-      Log.d(TAG, "CALL_RECORDER INCOMING_RECEIVED, callState: " + callState);
-      if (callState != 0) return;
-      callState = 1;
+      if (callState != Constants.CALL_INIT) return;
+      callState = Constants.CALL_RINGING;
+
+      callType = Constants.IS_INCOMING_CALL;
+      callNumber = number;
+
       Intent params = new Intent();
 
       params.putExtra("status", Constants.INCOMING_CALL_RECEIVED);
       params.putExtra("recordEnabled", recordEnabled);
-      params.putExtra("number", number);
-      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("number", callNumber);
 
       startMainAppService(Constants.onCallStateChange, params);
     }
 
     @Override
     protected void onIncomingCallAnswered(Context ctx, String number, Date start) {
-      Log.d(TAG, "CALL_RECORDER INCOMING_ANSWERED, callState: " + callState);
-      if (callState != 1) return;
-      callState = 2;
+      if (callType != Constants.IS_INCOMING_CALL) return;
+      if (callState != Constants.CALL_RINGING) return;
+      callState = Constants.CALL_CONNECTED;
+
+      callStart = new Date().getTime();
+
       Intent params = new Intent();
 
       params.putExtra("status", Constants.INCOMING_CALL_ANSWERED);
       params.putExtra("recordEnabled", recordEnabled);
-      params.putExtra("number", number);
-      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("number", callNumber);
 
       startMainAppService(Constants.onCallStateChange, params);
 
@@ -146,36 +166,39 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onIncomingCallEnded(Context ctx, String number, Date start, Date end) {
-      Log.d(TAG, "CALL_RECORDER INCOMING_ENDED, callState: " + callState);
-      if (callState != 2) return;
-      callState = 0;
+      if (callType != Constants.IS_INCOMING_CALL) return;
+      if (callState != Constants.CALL_CONNECTED) return;
+
       Intent params = new Intent();
 
       params.putExtra("status", Constants.INCOMING_CALL_ENDED);
       params.putExtra("recordEnabled", recordEnabled);
-      params.putExtra("number", number);
-      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("number", callNumber);
+      params.putExtra("duration", (int) (new Date().getTime() - callStart));
 
-      params.putExtra("end", String.valueOf(end.getTime()));
       if (recordService != null) {
         String path = stopRecord();
         params.putExtra("filePath", path);
       }
 
       startMainAppService(Constants.onCallStateChange, params);
+      resetCacheData();
     }
 
     @Override
     protected void onOutgoingCallStarted(Context ctx, String number, Date start) {
-      Log.d(TAG, "CALL_RECORDER OUTGOING_STARTED, callState: " + callState);
-      if (callState != 0) return;
-      callState = 1;
+      if (callState != Constants.CALL_INIT) return;
+      callState = Constants.CALL_RINGING;
+
+      callType = Constants.IS_OUTGOING_CALL;
+      callNumber = number;
+      callStart = new Date().getTime();
+
       Intent params = new Intent();
 
       params.putExtra("status", Constants.OUTGOING_CALL_STARTED);
       params.putExtra("recordEnabled", recordEnabled);
-      params.putExtra("number", number);
-      params.putExtra("start", String.valueOf(start.getTime()));
+      params.putExtra("number", callNumber);
 
       startMainAppService(Constants.onCallStateChange, params);
 
@@ -186,55 +209,61 @@ public class RecordAccessibilityService extends AccessibilityService {
 
     @Override
     protected void onOutgoingCallEnded(Context ctx, String number, Date start, Date end) {
-      try {
-        Log.d(TAG, "CALL_RECORDER OUTGOING_ENDED, callState: " + callState);
+      if (callType != Constants.IS_OUTGOING_CALL) return;
+      if (callState != Constants.CALL_RINGING && callState != Constants.CALL_CONNECTED) return;
 
-        if (callState != 1) return;
-        callState = 0;
+      Intent params = new Intent();
 
-        Intent params = new Intent();
+      params.putExtra("status", Constants.OUTGOING_CALL_ENDED);
+      params.putExtra("recordEnabled", recordEnabled);
+      params.putExtra("number", callNumber);
 
-        params.putExtra("status", Constants.OUTGOING_CALL_ENDED);
-        params.putExtra("recordEnabled", recordEnabled);
-        params.putExtra("number", number);
-        params.putExtra("start", String.valueOf(start.getTime()));
-
-        params.putExtra("end", String.valueOf(end.getTime()));
-
-        if (recordService != null) {
-          String path = stopRecord();
-          params.putExtra("filePath", path);
-        }
-
-        startMainAppService(Constants.onCallStateChange, params);
-      } catch (Exception e) {
-        Log.e(TAG, "onOutgoingCallEnded, error: " + e.getMessage());
+      if (callStart != null) {
+        params.putExtra("duration", (int) (new Date().getTime() - callStart));
+      } else if (callState == Constants.CALL_RINGING) {
+        params.putExtra("duration", 0);
       }
 
+      if (recordService != null) {
+        String path = stopRecord();
+        params.putExtra("filePath", path);
+      }
+
+      startMainAppService(Constants.onCallStateChange, params);
+      resetCacheData();
     }
 
     @Override
     protected void onMissedCall(Context ctx, String number, Date start, Date end) {
-      Log.d(TAG, "CALL_RECORDER MISSED, callState: " + callState);
-      if (callState != 1) return;
-      callState = 0;
+      if (callState != Constants.CALL_RINGING) return;
 
       Intent params = new Intent();
       params.putExtra("status", Constants.CALL_MISSED);
       params.putExtra("recordEnabled", recordEnabled);
-      params.putExtra("number", number);
-      params.putExtra("start", String.valueOf(start.getTime()));
-
-      params.putExtra("end", String.valueOf(end.getTime()));
+      params.putExtra("number", callNumber);
 
       startMainAppService(Constants.onCallStateChange, params);
+      resetCacheData();
     }
   };
 
+//  private void onOutgoingCallAnswered() {
+//    if (callType != Constants.IS_OUTGOING_CALL) return;
+//    if (callState != Constants.CALL_RINGING) return;
+//    callState = Constants.CALL_CONNECTED;
+//    callStart = new Date().getTime();
+//
+//    Intent params = new Intent();
+//
+//    params.putExtra("status", Constants.OUTGOING_CALL_ANSWERED);
+//    params.putExtra("recordEnabled", recordEnabled);
+//    params.putExtra("number", callNumber);
+//
+//    startMainAppService(Constants.onCallStateChange, params);
+//  }
+
   private void startMainAppService(String eventName, Intent eventData) {
     try {
-      Log.d(TAG, "startMainAppService: " + MAIN_APP_PACKAGE_NAME + " : " + eventName);
-
       eventData.setAction(eventName);
       eventData.setComponent(new ComponentName(MAIN_APP_PACKAGE_NAME, MAIN_APP_PACKAGE_NAME + ".telephony.HelperService"));
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -250,12 +279,18 @@ public class RecordAccessibilityService extends AccessibilityService {
 
   private void sendRecordEnabled(boolean recordEnabled) {
     String packageName = getPackageName();
-    Log.d(TAG, "sendRecordEnabled: " + packageName + " : " + Constants.onRecordEnabled);
 
     Intent params = new Intent();
     params.putExtra("recordEnabled", recordEnabled);
     params.setAction(packageName + "." + Constants.onRecordEnabled);
     sendBroadcast(params);
+  }
+
+  private void resetCacheData() {
+    callType = 0;
+    callState = Constants.CALL_INIT;
+    callStart = null;
+    callNumber = null;
   }
 }
 

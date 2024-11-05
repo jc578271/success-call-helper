@@ -28,7 +28,6 @@ public class AccessibilityEnabledService extends Service {
   public int onStartCommand(Intent intent, int flags, int startId) {
     String action = intent.getAction();
     if (action != null) {
-      Log.d(TAG, "onStartCommand, action: " + action);
       if (action.equals(Constants.getAccessibilityStatus)) {
         boolean accessibilityEnabled = AccessibilityServiceUtils.isAccessibilityServiceEnabled(getApplicationContext());
         sendAccessibilityStatus(accessibilityEnabled);
@@ -40,7 +39,6 @@ public class AccessibilityEnabledService extends Service {
 
   private void sendAccessibilityStatus(boolean accessibilityEnabled) {
     String packageName = getPackageName();
-    Log.d(TAG, "sendAccessibilityStatus: " + packageName + " : " + Constants.onAccessibilityEnabled + ", accessibilityEnabled: " + accessibilityEnabled);
 
     Intent params = new Intent();
     params.putExtra("accessibilityEnabled", accessibilityEnabled);

@@ -1,19 +1,10 @@
 package standard.inc.success.call.helper.services;
 
-import android.Manifest;
-import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.Build;
 import android.telephony.PhoneStateListener;
-import android.telephony.TelephonyCallback;
 import android.telephony.TelephonyManager;
-import android.util.Log;
-
-import androidx.annotation.RequiresApi;
-import androidx.core.app.ActivityCompat;
 
 import java.util.Date;
 
