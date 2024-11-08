@@ -49,14 +49,14 @@ public class MainActivity extends AppCompatActivity {
       startActivity(intent);
     });
 
-    /* open accessibility settings */
-    Button openInfoSettingButton = findViewById(R.id.openInfoSetting);
-    openInfoSettingButton.setOnClickListener(v -> {
-      Log.d(TAG, "openInfoSettingButton: clicked");
-      Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-      intent.setData(Uri.parse("package:" + getPackageName()));
-      startActivity(intent);
-    });
+    /* open info settings */
+//    Button openInfoSettingButton = findViewById(R.id.openInfoSetting);
+//    openInfoSettingButton.setOnClickListener(v -> {
+//      Log.d(TAG, "openInfoSettingButton: clicked");
+//      Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+//      intent.setData(Uri.parse("package:" + getPackageName()));
+//      startActivity(intent);
+//    });
   }
 
   @Override
