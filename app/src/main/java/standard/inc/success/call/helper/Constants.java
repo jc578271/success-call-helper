@@ -14,7 +14,8 @@ public abstract class Constants {
   public static final String OUTGOING_CALL_STARTED = "OUTGOING_CALL_STARTED";
   public static final String OUTGOING_CALL_ANSWERED = "OUTGOING_CALL_ANSWERED";
   public static final String OUTGOING_CALL_ENDED = "OUTGOING_CALL_ENDED";
-  public static final String CALL_MISSED = "CALL_MISSED";
+  public static final String OUTGOING_CALL_MISSED = "OUTGOING_CALL_MISSED";
+  public static final String INCOMING_CALL_MISSED = "INCOMING_CALL_MISSED";
 
   public static final int IS_OUTGOING_CALL = 1;
   public static final int IS_INCOMING_CALL = 2;

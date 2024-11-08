@@ -2,7 +2,6 @@ package standard.inc.success.call.helper;
 
 import android.Manifest;
 import android.accessibilityservice.AccessibilityService;
-import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
@@ -255,7 +254,11 @@ public class RecordAccessibilityService extends AccessibilityService {
       if (callState != Constants.CALL_RINGING) return;
 
       Intent params = new Intent();
-      params.putExtra("status", Constants.CALL_MISSED);
+
+      params.putExtra("status", callType == Constants.IS_INCOMING_CALL
+        ? Constants.INCOMING_CALL_MISSED
+        : Constants.OUTGOING_CALL_MISSED);
+
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
       params.putExtra("myNumbers", getMyPhoneNumbers());
