@@ -5,6 +5,7 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -41,10 +42,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /* open accessibility settings */
-    Button openSettingButton = findViewById(R.id.openSetting);
-    openSettingButton.setOnClickListener(v -> {
-      Log.d(TAG, "openSettingButton: clicked");
+    Button openAccessibilitySettingButton = findViewById(R.id.openAccessibilitySetting);
+    openAccessibilitySettingButton.setOnClickListener(v -> {
+      Log.d(TAG, "openAccessibilitySettingButton: clicked");
       Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+      startActivity(intent);
+    });
+
+    /* open accessibility settings */
+    Button openInfoSettingButton = findViewById(R.id.openInfoSetting);
+    openInfoSettingButton.setOnClickListener(v -> {
+      Log.d(TAG, "openInfoSettingButton: clicked");
+      Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+      intent.setData(Uri.parse("package:" + getPackageName()));
       startActivity(intent);
     });
   }
