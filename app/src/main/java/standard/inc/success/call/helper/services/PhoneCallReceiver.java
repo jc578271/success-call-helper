@@ -29,6 +29,9 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
 
     if (action.equals("android.intent.action.PHONE_STATE") ||
       action.equals("android.intent.action.NEW_OUTGOING_CALL")) {
+      String incomingNumber = intent.getStringExtra(TelephonyManager.EXTRA_INCOMING_NUMBER);
+      String incomingNumber2 = intent.getStringExtra(Intent.EXTRA_PHONE_NUMBER);
+
       /* TelephonyManager */
       TelephonyManager telephony =
         (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
@@ -36,8 +39,12 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
       telephony.listen(new PhoneStateListener() {
         @Override
         public void onCallStateChanged(int state, String phoneNumber) {
-//          Log.d(TAG, "onCallStateChanged, phoneNumber: " + phoneNumber);
-          onCustomCallStateChanged(context, state, phoneNumber);
+          String validNumber = getValidNumber(phoneNumber)
+            ? phoneNumber
+            : (getValidNumber(incomingNumber) ? incomingNumber : incomingNumber2);
+
+//          Log.d(TAG, "onCallStateChanged, validNumber: " + validNumber);
+          onCustomCallStateChanged(context, state, validNumber);
         }
       }, PhoneStateListener.LISTEN_CALL_STATE);
     }
@@ -144,5 +151,9 @@ public abstract class PhoneCallReceiver extends BroadcastReceiver {
         break;
     }
     lastState = state;
+  }
+
+  private boolean getValidNumber(String number) {
+    return number != null && !number.isEmpty();
   }
 }
