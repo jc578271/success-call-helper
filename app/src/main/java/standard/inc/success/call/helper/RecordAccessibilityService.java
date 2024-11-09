@@ -24,7 +24,7 @@ import java.util.Objects;
 import standard.inc.success.call.helper.services.PhoneCallReceiver;
 
 public class RecordAccessibilityService extends AccessibilityService {
-  private static final String MAIN_APP_PACKAGE_NAME = "standard.inc.success.call";
+  private static final String MAIN_APP_PACKAGE_NAME = Constants.MAIN_APP_PACKAGE_NAME;
   private static final String TAG = "RAService";
 
   private RecordService recordService;

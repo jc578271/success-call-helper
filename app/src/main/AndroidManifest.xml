@@ -73,5 +73,6 @@
   </application>
   <queries>
     <package android:name="standard.inc.success.call"/>
+    <package android:name="vn.base.call"/>
   </queries>
 </manifest>
