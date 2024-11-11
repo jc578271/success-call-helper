@@ -52,7 +52,7 @@ public class AccessibilityEnabledService extends Service {
       Notification myNotification = new Notification.Builder(getApplicationContext(), createChannel()).build();
 
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        startForeground(notificationId, myNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE);
+        startForeground(notificationId, myNotification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
       } else {
         startForeground(notificationId, myNotification);
       }

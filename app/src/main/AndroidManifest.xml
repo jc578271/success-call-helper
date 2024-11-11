@@ -13,7 +13,7 @@
 <!--  <uses-permission android:name="android.permission.READ_SMS" />-->
   <uses-permission android:name="android.permission.READ_CALL_LOG" />
   <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+  <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
 
   <application
     android:allowBackup="true"
@@ -61,7 +61,7 @@
         android:enabled="true"
         android:exported="true"
         android:permission="android.permission.FOREGROUND_SERVICE"
-        android:foregroundServiceType="specialUse" />
+        android:foregroundServiceType="dataSync" />
 
     <provider
       android:name=".FileContentProvider"
