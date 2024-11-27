@@ -14,7 +14,6 @@ import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -272,7 +271,7 @@ public class RecordAccessibilityService extends AccessibilityService {
     ArrayList<String> myPhoneList = new ArrayList<>();
 
     SubscriptionManager subscriptionManager = SubscriptionManager.from(getApplicationContext());
-    if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
+    if (checkSelfPermission(Manifest.permission.READ_PHONE_STATE) != PackageManager.PERMISSION_GRANTED) {
       return new String[0];
     }
     List<SubscriptionInfo> subsInfoList = subscriptionManager.getActiveSubscriptionInfoList();

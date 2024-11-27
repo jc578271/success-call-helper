@@ -46,17 +46,22 @@ public class MainActivity extends AppCompatActivity {
     openAccessibilitySettingButton.setOnClickListener(v -> {
       Log.d(TAG, "openAccessibilitySettingButton: clicked");
       Intent intent = new Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS);
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
       startActivity(intent);
     });
 
     /* open info settings */
-//    Button openInfoSettingButton = findViewById(R.id.openInfoSetting);
-//    openInfoSettingButton.setOnClickListener(v -> {
-//      Log.d(TAG, "openInfoSettingButton: clicked");
+    Button openInfoSettingButton = findViewById(R.id.openInfoSetting);
+    openInfoSettingButton.setOnClickListener(v -> {
+      Log.d(TAG, "openInfoSettingButton: clicked");
 //      Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
 //      intent.setData(Uri.parse("package:" + getPackageName()));
-//      startActivity(intent);
-//    });
+      Intent intent = new Intent(Settings.ACTION_MANAGE_ALL_APPLICATIONS_SETTINGS);
+      intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+      intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
+      startActivity(intent);
+    });
   }
 
   @Override
