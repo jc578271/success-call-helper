@@ -5,12 +5,15 @@ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
 import android.Manifest;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.util.Log;
 import android.widget.Button;
+import android.widget.TextView;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -62,6 +65,14 @@ public class MainActivity extends AppCompatActivity {
       intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
       startActivity(intent);
     });
+
+    /* version text */
+    TextView versionText = findViewById(R.id.versionText);
+    try {
+      PackageInfo packageInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+      String version = "Version " + packageInfo.versionName + " (" + packageInfo.versionCode + ")";
+      versionText.setText(version);
+    } catch (PackageManager.NameNotFoundException ignored) {}
   }
 
   @Override

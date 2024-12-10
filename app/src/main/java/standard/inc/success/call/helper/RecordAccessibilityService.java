@@ -8,10 +8,12 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.telecom.TelecomManager;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.view.accessibility.AccessibilityEvent;
+import android.view.accessibility.AccessibilityNodeInfo;
 
 import androidx.annotation.NonNull;
 
@@ -36,12 +38,22 @@ public class RecordAccessibilityService extends AccessibilityService {
 
   @Override
   public void onAccessibilityEvent(AccessibilityEvent accessibilityEvent) {
-//    AccessibilityNodeInfo info = accessibilityEvent.getSource();
-//    if (info != null && info.getText() != null) {
-//      Log.d(TAG, "info.getText(): "+ info.getText());
-//      if (info.getText().equals("Call add"))
-//      onOutgoingCallAnswered();
-//    }
+    AccessibilityNodeInfo info = accessibilityEvent.getSource();
+    TelecomManager telecomManager = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
+
+    if (info != null && info.getText() != null) {
+      Log.d(TAG, "info.getText(): "+ info.getPackageName() + " ___ " + telecomManager.getDefaultDialerPackage());
+
+      String dialerPackageName = telecomManager.getDefaultDialerPackage();
+
+      String[] parts = dialerPackageName.split("\\.");
+      int partsToJoin = parts.length - 1;
+      String incalluiPackageName = String.join(".", java.util.Arrays.copyOfRange(parts, 0, partsToJoin)) + ".incallui";
+
+      if (info.getPackageName().equals(dialerPackageName) || info.getPackageName().equals(incalluiPackageName)) {
+        onOutgoingCallAnswered();
+      }
+    }
   }
 
 //  @Override
@@ -285,20 +297,23 @@ public class RecordAccessibilityService extends AccessibilityService {
     return myPhoneList.toArray(new String[0]);
   }
 
-//  private void onOutgoingCallAnswered() {
-//    if (callType != Constants.IS_OUTGOING_CALL) return;
-//    if (callState != Constants.CALL_RINGING) return;
-//    callState = Constants.CALL_CONNECTED;
-//    callStart = new Date().getTime();
-//
-//    Intent params = new Intent();
-//
-//    params.putExtra("status", Constants.OUTGOING_CALL_ANSWERED);
-//    params.putExtra("recordEnabled", recordEnabled);
-//    params.putExtra("number", callNumber);
-//
-//    startMainAppService(Constants.onCallStateChange, params);
-//  }
+  private void onOutgoingCallAnswered() {
+    if (callType != Constants.IS_OUTGOING_CALL) return;
+    if (callState != Constants.CALL_RINGING) return;
+
+    Log.d(TAG, "onOutgoingCallAnswered");
+
+    callState = Constants.CALL_CONNECTED;
+    callStart = new Date().getTime();
+
+    Intent params = new Intent();
+
+    params.putExtra("status", Constants.OUTGOING_CALL_ANSWERED);
+    params.putExtra("recordEnabled", recordEnabled);
+    params.putExtra("number", callNumber);
+
+    startMainAppService(Constants.onCallStateChange, params);
+  }
 
   private void startMainAppService(String eventName, Intent eventData) {
     try {
