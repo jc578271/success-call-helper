@@ -42,7 +42,6 @@ public class RecordAccessibilityService extends AccessibilityService {
     TelecomManager telecomManager = (TelecomManager) getSystemService(Context.TELECOM_SERVICE);
 
     if (info != null && info.getText() != null) {
-      Log.d(TAG, "info.getText(): "+ info.getPackageName() + " ___ " + telecomManager.getDefaultDialerPackage());
 
       String dialerPackageName = telecomManager.getDefaultDialerPackage();
 
@@ -51,6 +50,7 @@ public class RecordAccessibilityService extends AccessibilityService {
       String incalluiPackageName = String.join(".", java.util.Arrays.copyOfRange(parts, 0, partsToJoin)) + ".incallui";
 
       if (info.getPackageName().equals(dialerPackageName) || info.getPackageName().equals(incalluiPackageName)) {
+        Log.d(TAG, "info.getText(): "+ info.getText());
         onOutgoingCallAnswered();
       }
     }
@@ -217,7 +217,6 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       callType = Constants.IS_OUTGOING_CALL;
       callNumber = number;
-      callStart = new Date().getTime();
 
       Intent params = new Intent();
 
@@ -227,10 +226,6 @@ public class RecordAccessibilityService extends AccessibilityService {
       params.putExtra("myNumbers", getMyPhoneNumbers());
 
       startMainAppService(Constants.onCallStateChange, params);
-
-      if (recordEnabled) {
-        startRecord("record-outgoing-", String.valueOf(start.getTime()));
-      }
     }
 
     @Override
@@ -245,15 +240,24 @@ public class RecordAccessibilityService extends AccessibilityService {
       params.putExtra("number", callNumber);
       params.putExtra("myNumbers", getMyPhoneNumbers());
 
+      int duration = 0;
+
       if (callStart != null) {
-        params.putExtra("duration", (int) (new Date().getTime() - callStart));
+        duration = (int) (new Date().getTime() - callStart);
+        if (duration > 500) {
+          params.putExtra("duration", duration);
+        } else {
+          params.putExtra("duration", 0);
+        }
       } else if (callState == Constants.CALL_RINGING) {
         params.putExtra("duration", 0);
       }
 
+      Log.d(TAG, "onOutgoingCallEnded: duration: " + duration);
+
       if (recordService != null) {
         String path = stopRecord();
-        params.putExtra("filePath", path);
+        if (duration > 500) params.putExtra("filePath", path);
       }
 
       startMainAppService(Constants.onCallStateChange, params);
@@ -301,6 +305,8 @@ public class RecordAccessibilityService extends AccessibilityService {
     if (callType != Constants.IS_OUTGOING_CALL) return;
     if (callState != Constants.CALL_RINGING) return;
 
+    callStart = new Date().getTime();
+
     Log.d(TAG, "onOutgoingCallAnswered");
 
     callState = Constants.CALL_CONNECTED;
@@ -311,6 +317,11 @@ public class RecordAccessibilityService extends AccessibilityService {
     params.putExtra("status", Constants.OUTGOING_CALL_ANSWERED);
     params.putExtra("recordEnabled", recordEnabled);
     params.putExtra("number", callNumber);
+    params.putExtra("myNumbers", getMyPhoneNumbers());
+
+    if (recordEnabled) {
+      startRecord("record-outgoing-", String.valueOf(callStart));
+    }
 
     startMainAppService(Constants.onCallStateChange, params);
   }

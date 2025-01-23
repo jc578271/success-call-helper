@@ -48,17 +48,20 @@ public class RecordService {
   }
 
   public String stopRecord() {
+    if (mediaRecorder == null) return "";
     try {
       mediaRecorder.stop();
       Log.i(TAG, "stop record");
     } catch (Exception e) {
-      mediaRecorder.reset();
-      mediaRecorder.release();
       Log.e("stopping_failed", "Stop failed:" + e);
     }
 
-    mediaRecorder.reset();
-    mediaRecorder.release();
+    try {
+      mediaRecorder.reset();
+      mediaRecorder.release();
+    } catch (Exception e) {
+      Log.e("stopping_failed", "Stop failed:" + e);
+    }
 
     return FileContentProvider.getUriForFile(fileName);
   }
