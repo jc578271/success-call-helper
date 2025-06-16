@@ -32,7 +32,8 @@ public class RecordAccessibilityService extends AccessibilityService {
   private int callState = 0;
   private int callType = 0; // 0: null, 1: outgoing, 2: incoming
   private String callNumber = null;
-  private Long callStart = null;
+  private Long activeCallStart = null;
+  private Long inactiveCallStart = null;
   private boolean recordEnabled = false;
   private MyPhoneCallReceiver recordingReceiver;
 
@@ -152,9 +153,11 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       callType = Constants.IS_INCOMING_CALL;
       callNumber = number;
+      inactiveCallStart = new Date().getTime();
 
       Intent params = new Intent();
 
+      params.putExtra("inactiveStart", inactiveCallStart);
       params.putExtra("status", Constants.INCOMING_CALL_RECEIVED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
@@ -167,12 +170,15 @@ public class RecordAccessibilityService extends AccessibilityService {
     protected void onIncomingCallAnswered(Context ctx, String number, Date start) {
       if (callType != Constants.IS_INCOMING_CALL) return;
       if (callState != Constants.CALL_RINGING) return;
-      callState = Constants.CALL_CONNECTED;
+      if (inactiveCallStart == null) return;
 
-      callStart = new Date().getTime();
+      callState = Constants.CALL_CONNECTED;
+      activeCallStart = new Date().getTime();
 
       Intent params = new Intent();
 
+      params.putExtra("activeStart", activeCallStart);
+      params.putExtra("inactiveStart", inactiveCallStart);
       params.putExtra("status", Constants.INCOMING_CALL_ANSWERED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
@@ -192,13 +198,15 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       Intent params = new Intent();
 
+      if (activeCallStart != null) params.putExtra("activeStart", activeCallStart);
+      if (inactiveCallStart != null) params.putExtra("inactiveStart", inactiveCallStart);
       params.putExtra("status", Constants.INCOMING_CALL_ENDED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
       params.putExtra("myNumbers", getMyPhoneNumbers());
-      params.putExtra("duration", (int) (new Date().getTime() - callStart));
+      params.putExtra("duration", (int) (new Date().getTime() - activeCallStart));
 
-      if (recordService != null) {
+      if (recordService != null && recordEnabled) {
         String path = stopRecord();
         params.putExtra("filePath", path);
       }
@@ -215,11 +223,13 @@ public class RecordAccessibilityService extends AccessibilityService {
       if (callState != Constants.CALL_INIT) return;
       callState = Constants.CALL_RINGING;
 
+      inactiveCallStart = new Date().getTime();
       callType = Constants.IS_OUTGOING_CALL;
       callNumber = number;
 
       Intent params = new Intent();
 
+      params.putExtra("inactiveStart", inactiveCallStart);
       params.putExtra("status", Constants.OUTGOING_CALL_STARTED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
@@ -232,9 +242,11 @@ public class RecordAccessibilityService extends AccessibilityService {
     protected void onOutgoingCallEnded(Context ctx, String number, Date start, Date end) {
       if (callType != Constants.IS_OUTGOING_CALL) return;
       if (callState != Constants.CALL_RINGING && callState != Constants.CALL_CONNECTED) return;
+      if (inactiveCallStart == null) return;
 
       Intent params = new Intent();
 
+      params.putExtra("inactiveStart", inactiveCallStart);
       params.putExtra("status", Constants.OUTGOING_CALL_ENDED);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
@@ -242,9 +254,10 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       int duration = 0;
 
-      if (callStart != null) {
-        duration = (int) (new Date().getTime() - callStart);
-        if (duration > 500) {
+      if (activeCallStart != null) {
+        duration = (int) (new Date().getTime() - activeCallStart);
+        if (duration > 700) {
+          params.putExtra("activeStart", activeCallStart);
           params.putExtra("duration", duration);
         } else {
           params.putExtra("duration", 0);
@@ -255,9 +268,9 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       Log.d(TAG, "onOutgoingCallEnded: duration: " + duration);
 
-      if (recordService != null) {
+      if (recordService != null && recordEnabled) {
         String path = stopRecord();
-        if (duration > 500) params.putExtra("filePath", path);
+        if (duration > 700) params.putExtra("filePath", path);
       }
 
       startMainAppService(Constants.onCallStateChange, params);
@@ -274,6 +287,8 @@ public class RecordAccessibilityService extends AccessibilityService {
         ? Constants.INCOMING_CALL_MISSED
         : Constants.OUTGOING_CALL_MISSED);
 
+      if (activeCallStart != null) params.putExtra("activeStart", activeCallStart);
+      if (inactiveCallStart != null) params.putExtra("inactiveStart", inactiveCallStart);
       params.putExtra("recordEnabled", recordEnabled);
       params.putExtra("number", callNumber);
       params.putExtra("myNumbers", getMyPhoneNumbers());
@@ -305,22 +320,28 @@ public class RecordAccessibilityService extends AccessibilityService {
     if (callType != Constants.IS_OUTGOING_CALL) return;
     if (callState != Constants.CALL_RINGING) return;
 
-    callStart = new Date().getTime();
+    /* if answer event to close to inactive call start time, do not trigger this event */
+    if (inactiveCallStart == null) return;
+    int duration = (int) (new Date().getTime() - inactiveCallStart);
+    Log.d(TAG, "onOutgoingCallAnswered, duration: " + duration);
+    if (duration < 1500) return;
 
-    Log.d(TAG, "onOutgoingCallAnswered");
+    Log.d(TAG, "onOutgoingCallAnswered trigger");
 
     callState = Constants.CALL_CONNECTED;
-    callStart = new Date().getTime();
+    activeCallStart = new Date().getTime();
 
-    Intent params = new Intent();
+    Intent params= new Intent();
 
+    params.putExtra("activeStart", activeCallStart);
+    params.putExtra("inactiveStart", inactiveCallStart);
     params.putExtra("status", Constants.OUTGOING_CALL_ANSWERED);
     params.putExtra("recordEnabled", recordEnabled);
     params.putExtra("number", callNumber);
     params.putExtra("myNumbers", getMyPhoneNumbers());
 
     if (recordEnabled) {
-      startRecord("record-outgoing-", String.valueOf(callStart));
+      startRecord("record-outgoing-", String.valueOf(activeCallStart));
     }
 
     startMainAppService(Constants.onCallStateChange, params);
@@ -353,7 +374,8 @@ public class RecordAccessibilityService extends AccessibilityService {
   private void resetCacheData() {
     callType = 0;
     callState = Constants.CALL_INIT;
-    callStart = null;
+    activeCallStart = null;
+    inactiveCallStart = null;
     callNumber = null;
   }
 }
