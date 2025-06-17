@@ -38,7 +38,7 @@ if [ $? -eq 0 ]; then
     echo "Build successful!"
     
     # Copy APK to build folder
-    cp app/release/app-release.apk build/CallHelper.apk
+    cp app/build/outputs/apk/release/app-release.apk build/CallHelper.apk
     echo "APK copied to build/CallHelper.apk"
 else
     echo "Build failed! Please check the error messages above."
