@@ -26,6 +26,7 @@ import standard.inc.success.call.helper.services.PhoneCallReceiver;
 
 public class RecordAccessibilityService extends AccessibilityService {
   private static final String MAIN_APP_PACKAGE_NAME = Constants.MAIN_APP_PACKAGE_NAME;
+  private static final String MAIN_APP2_PACKAGE_NAME = Constants.MAIN_APP2_PACKAGE_NAME;
   private static final String TAG = "RAService";
 
   private RecordService recordService;
@@ -350,11 +351,19 @@ public class RecordAccessibilityService extends AccessibilityService {
   private void startMainAppService(String eventName, Intent eventData) {
     try {
       eventData.setAction(eventName);
-      eventData.setComponent(new ComponentName(MAIN_APP_PACKAGE_NAME, MAIN_APP_PACKAGE_NAME + ".telephony.HelperService"));
+
+      Intent newIntent1 = new Intent(eventData);
+      Intent newIntent2 = new Intent(eventData);
+
+      newIntent1.setComponent(new ComponentName(MAIN_APP_PACKAGE_NAME, MAIN_APP_PACKAGE_NAME + ".telephony.HelperService"));
+      newIntent2.setComponent(new ComponentName(MAIN_APP2_PACKAGE_NAME, MAIN_APP_PACKAGE_NAME + ".telephony.HelperService"));
+
       if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-        startForegroundService(eventData);
+        startForegroundService(newIntent1);
+        startForegroundService(newIntent2);
       } else {
-        startService(eventData);
+        startService(newIntent1);
+        startService(newIntent2);
       }
 
     } catch (Exception e) {

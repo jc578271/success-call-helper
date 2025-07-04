@@ -2,6 +2,7 @@ package standard.inc.success.call.helper;
 
 public abstract class Constants {
   public static final String MAIN_APP_PACKAGE_NAME = "vn.base.call";
+  public static final String MAIN_APP2_PACKAGE_NAME = "standard.inc.success.call";
   public static final String onRecordEnabled = "onRecordEnabled";
   public static final String getRecordStatus = "getRecordStatus";
   public static final String getAccessibilityStatus = "getAccessibilityStatus";
