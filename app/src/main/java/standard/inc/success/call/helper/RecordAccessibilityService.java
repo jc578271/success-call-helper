@@ -237,6 +237,10 @@ public class RecordAccessibilityService extends AccessibilityService {
       params.putExtra("myNumbers", getMyPhoneNumbers());
 
       startMainAppService(Constants.onCallStateChange, params);
+
+      if (recordEnabled) {
+        startRecord("record-outgoing-", String.valueOf(activeCallStart));
+      }
     }
 
     @Override
@@ -340,10 +344,6 @@ public class RecordAccessibilityService extends AccessibilityService {
     params.putExtra("recordEnabled", recordEnabled);
     params.putExtra("number", callNumber);
     params.putExtra("myNumbers", getMyPhoneNumbers());
-
-    if (recordEnabled) {
-      startRecord("record-outgoing-", String.valueOf(activeCallStart));
-    }
 
     startMainAppService(Constants.onCallStateChange, params);
   }
