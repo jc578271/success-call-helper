@@ -275,7 +275,7 @@ public class RecordAccessibilityService extends AccessibilityService {
 
       if (recordService != null && recordEnabled) {
         String path = stopRecord();
-        if (duration > 700) params.putExtra("filePath", path);
+        params.putExtra("filePath", path);
       }
 
       startMainAppService(Constants.onCallStateChange, params);
